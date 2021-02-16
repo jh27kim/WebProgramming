@@ -1,6 +1,36 @@
+from .models import Question
+from django.shortcuts import render, get_object_or_404, redirect
+from django.utils import timezone
+from .forms import QuestionForm
 
-from django.shortcuts import render
-from django.http import HttpResponse
 
 def index(request):
-    return HttpResponse("한양인의 커뮤니티 Pride에 오신 것을 환영합니다!")
+    question_list = Question.objects.order_by('-create_date')
+    context = {'question_list': question_list}
+    return render(request, 'pride/question_list.html', context)
+
+
+def detail(request, question_id):
+    question = get_object_or_404(Question, pk=question_id)
+    context = {'question': question}
+    return render(request, 'pride/question_detail.html', context)
+
+
+def answer_create(request, question_id):
+    question = get_object_or_404(Question, pk=question_id)
+    question.answer_set.create(content=request.POST.get('content'), create_date=timezone.now())
+    return redirect('pride:detail', question_id=question.id)
+
+
+def question_create(request):
+    if request.method == 'POST':
+        form = QuestionForm(request.POST)
+        if form.is_valid():
+            question = form.save(commit=False)
+            question.create_date = timezone.now()
+            question.save()
+            return redirect('pride:index')
+    else:
+        form = QuestionForm()
+    context = {'form': form}
+    return render(request, 'pride/question_form.html', context)
